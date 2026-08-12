@@ -64,22 +64,27 @@ having produced a bundle that points at `localhost`.
 
 ---
 
-## Two things that cost real time
+## Two defects, not two preferences
 
-### The build must produce the functions
+### The deployment could not be rebuilt from the repository
 
-The API is built through **Vercel's Build Output API**, not by dropping files
-into a root `api/` directory. Vercel discovers `api/**` functions from the source
-tree it clones, so handlers *generated during the build* are never registered and
-the deployment ships with no functions at all — every route 404s.
+The more serious of the two, and a reproducibility failure rather than a
+configuration choice: for a while, the live API could not be produced from a
+clean clone of this repository at all.
 
-That failure hid for a while behind the CLI, which uploads the working directory:
-the built bundles were present locally, gitignored, and therefore part of no
-commit. The deployment worked and could not be reproduced from a clean clone.
+Vercel discovers `api/**` functions from the source tree it clones, so handlers
+*generated during the build* are never registered — the deployment ships with no
+functions and every route 404s. The CLI hid that, because it uploads the working
+directory: the built bundles existed on a laptop, were gitignored, and were
+therefore part of no commit. The deployment worked, and nothing in version
+control could reproduce it. A green pipeline proved nothing about what was
+actually serving.
+
 `scripts/build-api.mjs` now esbuild-bundles each handler into
-`.vercel/output/functions/**.func` with an explicit route table, which is the
-contract for "the build produces the functions" — the same commit deploys
-identically from a laptop, from CI, or from Vercel's own builder.
+`.vercel/output/functions/**.func` with an explicit route table — Vercel's Build
+Output API, which is the contract for *the build produces the functions*. The
+same commit deploys identically from a laptop, from CI, or from Vercel's own
+builder.
 
 ### Two deploy paths is the failure mode
 

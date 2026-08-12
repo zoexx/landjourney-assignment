@@ -182,7 +182,7 @@ not just colour. → [docs/application-form.md](docs/application-form.md)
 | | |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | State ownership, authorization, the transaction boundary, concurrency, failure handling, tests |
-| [docs/deployment.md](docs/deployment.md) | What gates vs what deploys, project config, environment, and the two traps that cost real time |
+| [docs/deployment.md](docs/deployment.md) | What gates vs what deploys, project config, environment, and the two real defects behind both |
 | [docs/application-form.md](docs/application-form.md) | The bonus form in full, including its one honest limitation |
 | [docs/process.md](docs/process.md) | Time spent, what was cut, how AI was used, what another two hours would buy |
 | [docs/build-plan.md](docs/build-plan.md) | The plan written before any code — scope, domain model, screens, demo paths, cut order |
