@@ -1,7 +1,16 @@
 # Ridgeline — agricultural lending servicing portal
 
-**Option 3.** An existing borrower draws against an established credit facility;
-a lender reviews, approves and releases the funds.
+**Option 3 — the servicing portal.** An existing borrower draws against an
+established credit facility; a lender reviews, approves and releases the funds.
+
+Chosen because servicing is the option whose difficulty is *state* rather than
+screens. A draw request is money moving between two parties who each see a
+different view of it, so the hard parts are the ones worth being assessed on:
+which transitions are legal and who may make them, what happens when two people
+act on the same request at once, and whether a half-finished transition can leave
+a balance wrong. Each of those has a verifiable answer, and this README points at
+where to check it. A schema-driven intake form was then built as the bonus, so
+forms at real complexity are covered too.
 
 | | |
 |---|---|
@@ -21,7 +30,7 @@ authorization, concurrency, atomicity and failure handling — not feature count
 
 | Account | Password | Opens onto |
 |---|---|---|
-| `borrower@example.com` | `DemoBorrower2026` | A $100,000 facility, $40,000 drawn — **$60,000 available** — one funded release and one awaiting a decision |
+| `borrower@example.com` | `DemoBorrower2026` | A $100,000 facility, $40,000 drawn — **$60,000 available** — four requests spread across the workflow: one funded, one declined, one awaiting a lender decision, and an application part-way through the form |
 | `lender@example.com` | `DemoLender2026` | The cross-borrower review queue |
 
 Signup is live too, but a new account is always provisioned as a **borrower**
@@ -49,6 +58,12 @@ queue** through review → approve → fund, and watch the balance move atomical
 with the event history. Then open one request in two tabs and act in both — the
 second gets a 409 and a refetch, never a silent overwrite. Submitting a fresh
 release as the borrower exercises the amount guard on the way in.
+
+The other rows are already-finished work, left in place because they are worth
+opening: the **declined $60,000 release** carries the full event history of a
+completed decline — submitted, picked up, refused, each with actor and reason —
+and the **draft application** resumes exactly where it was abandoned, which is
+the autosave claim rather than a description of it.
 
 ---
 
@@ -175,6 +190,93 @@ in both runtimes; edits autosave to Postgres, so a hard refresh mid-form resumes
 on the same step with values intact. Eligibility is evaluated client-side for the
 live panel and again server-side where it is persisted — and it gates legality,
 not just colour. → [docs/application-form.md](docs/application-form.md)
+
+---
+
+## What another two hours would buy
+
+In priority order:
+
+1. **Real idempotency keys** on the transition endpoint, so a retried command is
+   provably the same command rather than a second one.
+2. **Integration tests over HTTP** covering the two-tab stale conflict and the
+   competing-credit race. Both hold today, but they are verified by hand.
+3. **Queue sorting and keyboard-first navigation** on the lender screen — the
+   filter is built, the sort is not.
+4. **Structured logs around every transition**, which is what makes "why is this
+   request stuck in review" answerable in production.
+
+Cut deliberately, each a bounded addition the transition map is built to absorb:
+cancellation, request-more-info and partial approval are one map entry, one guard
+and one button each. Notifications, pagination, document upload, real money
+movement and multi-loan borrowers are not built and are not claimed.
+→ [docs/process.md](docs/process.md)
+
+---
+
+## How I used AI
+
+**Claude Code did the implementation throughout**, directed against a plan written
+first, with the Supabase and Vercel MCP servers used for database and deployment
+work.
+
+**Planned before delegating.** [The build plan](docs/build-plan.md) and
+[the design system](docs/design-tokens.md) were settled before any code existed,
+so the model was implementing decisions rather than inventing them.
+
+**Delegated:** the remaining API routes and the borrower and lender screens, built
+by three parallel sub-agents against strictly disjoint file ownership. The shared
+primitives — status badge, timeline, the named-command store — were written first
+precisely so three agents could not invent three vocabularies for the same thing.
+
+**Not delegated:** the domain core. The transition map, the guards and the
+transaction boundary are the parts being assessed, so they were written and
+reviewed directly, with 26 tests green before any UI existed. Verification was not
+delegated either — every security claim in these docs was checked with a real
+request against the live system.
+
+### Rejected or rewritten
+
+- **A service-role client** to make the funding transition atomic. It would have
+  bypassed RLS, which is the actual security boundary. Replaced with a Postgres
+  function that keeps both the transaction and RLS.
+- **A trigger auto-confirming `auth.users`**, proposed to get around email
+  confirmation blocking signup. It weakens an authentication control to save a
+  click; the toggle was left for the account owner to flip instead.
+- **Disabling pnpm's `minimumReleaseAge`** to install a same-day release. Pinned
+  to an aged-out version rather than switch a supply-chain policy off.
+- **`@shadng/sng-ui` as a dependency** — it declares `@angular/core: ^21` as a
+  peer against this project's Angular 22. Used its copy-paste CLI instead, which
+  is the library's primary usage mode.
+- **CLI deploys from GitHub Actions**, rewritten entirely, and the Vercel token
+  deleted rather than narrowed. Actions gates; Vercel deploys.
+
+### Plausible and wrong
+
+Each of these was caught by running the thing and reading the output, never by
+re-reading the code.
+
+- **The API served 404 on every route for about forty minutes while looking
+  healthy.** Vercel's Git integration and CLI deploys were both live; the git one
+  silently won each push, rebuilding with default settings. Every manual check
+  passed because the clobber landed minutes *after* each verified-good deploy. The
+  deeper defect it exposed was worse than the outage: the running deployment could
+  not be reproduced from a clean clone, because the built handlers were gitignored
+  and existed only on a laptop.
+- **Every route returned `FUNCTION_INVOCATION_FAILED`**, including a zero-import
+  health probe. The cause was the *root* `package.json` missing `"type": "module"`,
+  found in the runtime log after guessing had failed.
+- **Signup looked fine because the seeded accounts sign in fine.** It is a
+  different code path, and Supabase rejects `example.com` addresses there.
+- **turbo 2 defaults `envMode` to strict**, so build variables not declared in a
+  task's `env` array are stripped — which produced a green pipeline and a bundle
+  pointing at `localhost`. `scripts/gen-env.mjs` now fails the build instead of
+  shipping that.
+
+The honest summary: AI made the volume possible — more shipped here than three
+unassisted hours would produce — and was least reliable about anything it could
+not directly observe, which is exactly where the deployment defects lived.
+→ [docs/process.md](docs/process.md#how-ai-was-used)
 
 ---
 
