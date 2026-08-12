@@ -295,6 +295,20 @@ Accepted trade-offs:
   `scripts/build-api.mjs` therefore esbuild-bundles each handler into `api/` as a
   self-contained function, so nothing is left to resolve at runtime. The source
   of truth stays in `apps/api`; `api/*.js` is generated and gitignored.
+- **Deployment belongs to the Actions job, and only to it.** Vercel's Git
+  integration was connected early on, which meant every push rebuilt both
+  projects using each project's *default* settings — repository root,
+  auto-detect, no `--local-config`. For the API that produced a deployment where
+  `scripts/build-api.mjs` never ran, so it had no functions at all and served 404
+  on every route, and the production alias was reassigned to it on each push. Two
+  deploy paths existed and the wrong one silently won.
+
+  What made it dangerous was not the 404 but the schedule: the clobbering
+  happened on push, minutes after a verified-good CLI deploy, so every manual
+  check passed and the service broke afterwards. The Git integration is now
+  disconnected on both projects. One deploy path, one config per project, and it
+  is the one under version control.
+
 - **`@supabase/supabase-js` is pinned to 2.112.2**, not the latest. pnpm's
   `minimumReleaseAge` supply-chain policy rejects packages published within 24
   hours; rather than disable the policy I pinned to a version that has aged out.
