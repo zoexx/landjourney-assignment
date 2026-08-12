@@ -191,6 +191,11 @@ on the same step with values intact. Eligibility is evaluated client-side for th
 live panel and again server-side where it is persisted — and it gates legality,
 not just colour. → [docs/application-form.md](docs/application-form.md)
 
+What it would take to make this Option 2 proper — separating the form, the
+answers, the policy and the file into four things with four lifecycles, and
+fixing three defects the current version carries — is designed out in
+[docs/option-2-plan.md](docs/option-2-plan.md).
+
 ---
 
 ## What another two hours would buy
@@ -286,9 +291,10 @@ not directly observe, which is exactly where the deployment defects lived.
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | State ownership, authorization, the transaction boundary, concurrency, failure handling, tests |
 | [docs/deployment.md](docs/deployment.md) | What gates vs what deploys, project config, environment, and the two real defects behind both |
-| [docs/application-form.md](docs/application-form.md) | The bonus form in full, including its one honest limitation |
+| [docs/application-form.md](docs/application-form.md) | The bonus form in full, including the two limitations it names — the autosave window, and unknown rolling up as green |
 | [docs/process.md](docs/process.md) | Time spent, what was cut, how AI was used, what another two hours would buy |
 | [docs/build-plan.md](docs/build-plan.md) | The plan written before any code — scope, domain model, screens, demo paths, cut order |
+| [docs/option-2-plan.md](docs/option-2-plan.md) | A design for Option 2 proper — the four-part split, the eligibility engine, and the three defects in the bonus form it fixes |
 | [docs/design-tokens.md](docs/design-tokens.md) | The design system, settled before the first component |
 | [supabase/README.md](supabase/README.md) | What each migration establishes and how to replay them |
 
