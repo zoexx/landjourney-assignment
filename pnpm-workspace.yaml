@@ -1,15 +1,14 @@
 packages:
   - "apps/*"
   - "packages/*"
-allowBuilds:
-  '@parcel/watcher': set this to true or false
-  esbuild: set this to true or false
-  lmdb: set this to true or false
-  msgpackr-extract: set this to true or false
-minimumReleaseAgeExclude:
-  - '@supabase/auth-js@2.112.3'
-  - '@supabase/functions-js@2.112.3'
-  - '@supabase/postgrest-js@2.112.3'
-  - '@supabase/realtime-js@2.112.3'
-  - '@supabase/storage-js@2.112.3'
-  - '@supabase/supabase-js@2.112.3'
+
+# Angular's toolchain needs these to run their install scripts.
+onlyBuiltDependencies:
+  - esbuild
+  - "@parcel/watcher"
+  - lmdb
+  - msgpackr-extract
+
+# turbo already guarantees install ordering; re-checking before every task
+# just makes each one shell out to a second pnpm install.
+verifyDepsBeforeRun: false

