@@ -27,13 +27,10 @@ authorization, concurrency, atomicity and failure handling — not feature count
 
 `example.com` is reserved by RFC 2606, so nothing here is ever deliverable.
 
-> **On signup:** the Supabase project this is wired to still has **Confirm email
-> enabled**, and the built-in SMTP rate-limits to a couple of sends per hour. New
-> signups are therefore blocked before a user row is even created. The signup
-> screen is fully built and correct, and works the moment that toggle is turned
-> off in **Auth → Providers → Email**. See *Known gaps* below — I could not flip
-> it programmatically and did not want to weaken an authentication control to
-> route around it.
+> **On signup:** you can also create your own account — signup is live. A new
+> account is always provisioned as a **borrower**, enforced by a trigger on
+> `auth.users`; the lender role is granted, never self-selected. Note that
+> Supabase rejects `example.com` at signup, so use a different domain.
 
 ---
 
@@ -51,27 +48,25 @@ pnpm run lint         # typecheck across the workspace
 ### Deployment
 
 `.github/workflows/ci.yml` runs install → lint → test → build on every push, then
-deploys **both** Vercel projects from `main`. The deploy job needs four repository
-secrets and **skips itself with a notice rather than failing** when they are
-absent, so a fork still gets a green pipeline:
+deploys **both** Vercel projects from `main`. Push-to-deploy is **live**: a merge
+to `main` that passes `verify` deploys both projects automatically.
 
 | Secret | |
 |---|---|
-| `VERCEL_TOKEN` | account token |
+| `VERCEL_TOKEN_WEB` | project-scoped token, `landjourney-web` |
+| `VERCEL_TOKEN_API` | project-scoped token, `landjourney-api` |
 | `VERCEL_ORG_ID` | team id |
-| `VERCEL_PROJECT_ID_WEB` | `landjourney-web` |
-| `VERCEL_PROJECT_ID_API` | `landjourney-api` |
+| `VERCEL_PROJECT_ID_WEB` | `prj_7OfRQJbUbNU5YaeLPj6ksfOc8UdZ` |
+| `VERCEL_PROJECT_ID_API` | `prj_bhsXhtATycMvdWXrbd47PetMgJkt` |
 
-> **Status, stated plainly:** those four secrets are **not set on this repository
-> yet**, so the deploy job currently skips both legs with a notice instead of
-> deploying. `VERCEL_TOKEN` has to be minted by the account owner, which is not
-> something the build can do for itself. The live deployments above were made
-> with exactly the commands in that job, run from the CLI. Adding the secrets
-> turns push-to-deploy on with no change to the workflow file.
->
-> The two project ids are `prj_7OfRQJbUbNU5YaeLPj6ksfOc8UdZ` (web) and
-> `prj_bhsXhtATycMvdWXrbd47PetMgJkt` (api); the org is
-> `team_ucus6vewEnZ67lEny9gWZJlA`.
+Each matrix leg carries **its own project-scoped token** rather than sharing one
+account-wide credential. The web token cannot see the API project and vice versa,
+so a leaked or misused token reaches exactly one project. The extra secret is
+worth that.
+
+The job still **skips itself with a notice rather than failing** when the secrets
+are absent, so a fork or a fresh clone gets a green pipeline instead of a red one
+it has no way to fix.
 
 The three **public** build values — `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 and `API_BASE_URL` — are set as repository *variables* rather than secrets,
@@ -337,12 +332,12 @@ Accepted trade-offs:
 
 Stated as decisions, not omissions:
 
-1. **Fresh signup is blocked by a dashboard setting.** Confirm-email is on and
-   the built-in SMTP is rate-limited, so signup fails before a user row exists.
-   The screen is built and correct. I deliberately did **not** add a trigger to
-   auto-confirm addresses — that weakens an authentication control, and it is the
-   owner's call, not mine. One toggle in Auth → Providers → Email fixes it.
-2. The autosave debounce window described under *The bonus* below.
+1. The autosave debounce window described under *The bonus* below.
+
+> Signup was previously blocked by Supabase's *Confirm email* setting, and this
+> section said so. Rather than route around it with a trigger that auto-confirms
+> addresses — which weakens an authentication control — the toggle was left for
+> the account owner to flip. It has been flipped, and signup now works.
 
 ---
 
