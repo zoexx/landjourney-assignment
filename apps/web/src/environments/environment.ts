@@ -2,5 +2,5 @@
 export const environment = {
   "supabaseUrl": "https://hvymtfuojhzagfnszoey.supabase.co",
   "supabaseKey": "sb_publishable_c8zezP75jyeZtVlYs_wwxw_o1-SBCsE",
-  "apiBase": "http://localhost:3001"
+  "apiBase": "https://landjourney-api.vercel.app"
 } as const;

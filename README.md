@@ -215,7 +215,13 @@ transaction (`SELECT … FOR UPDATE`, then compare), which makes it a real
 compare-and-set rather than check-then-write. A mismatch returns 409 and the UI
 refetches. **It never retries** — a workflow command is not safe to replay.
 
-**Cross-request contention.** Version checks alone are not enough. Given $60,000
+**Cross-request contention.** Version checks alone are not enough. Verified end to
+end against the live API: two $40,000 requests were both approved against $60,000
+of headroom (the balance did not move — approval reserves nothing), the first
+funded to a balance of $80,000, and the second was refused with `guard_failed`
+and *"Available credit has changed since this request was approved."* The balance
+was unchanged by the refusal and the second request stayed `approved` rather than
+being corrupted into a half-state. Given $60,000
 available and two approved $40,000 requests, both were legitimately approvable —
 approval does not reserve credit. Funding therefore re-checks the **loan
 aggregate** at funding time, inside the same transaction that moves the money. The
