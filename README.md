@@ -48,25 +48,26 @@ pnpm run lint         # typecheck across the workspace
 ### Deployment
 
 `.github/workflows/ci.yml` runs install → lint → test → build on every push, then
-deploys **both** Vercel projects from `main`. Push-to-deploy is **live**: a merge
-to `main` that passes `verify` deploys both projects automatically.
+deploys **both** Vercel projects from `main`.
 
 | Secret | |
 |---|---|
-| `VERCEL_TOKEN_WEB` | project-scoped token, `landjourney-web` |
-| `VERCEL_TOKEN_API` | project-scoped token, `landjourney-api` |
-| `VERCEL_ORG_ID` | team id |
+| `VERCEL_TOKEN` | **account-scoped** token |
+| `VERCEL_ORG_ID` | `team_ucus6vewEnZ67lEny9gWZJlA` |
 | `VERCEL_PROJECT_ID_WEB` | `prj_7OfRQJbUbNU5YaeLPj6ksfOc8UdZ` |
 | `VERCEL_PROJECT_ID_API` | `prj_bhsXhtATycMvdWXrbd47PetMgJkt` |
 
-Each matrix leg carries **its own project-scoped token** rather than sharing one
-account-wide credential. The web token cannot see the API project and vice versa,
-so a leaked or misused token reaches exactly one project. The extra secret is
-worth that.
+`VERCEL_ORG_ID` and both project ids are set. **`VERCEL_TOKEN` is not**, so the
+deploy job currently skips both legs with a notice rather than failing — a fork
+or a fresh clone gets a green pipeline instead of a red one it cannot fix.
 
-The job still **skips itself with a notice rather than failing** when the secrets
-are absent, so a fork or a fresh clone gets a green pipeline instead of a red one
-it has no way to fix.
+> The token must be **account-scoped**. Project-scoped tokens (`vcp_…`) were
+> tried first, since one token per project is the better security posture: each
+> can reach only the project it was minted for. They authenticate against the
+> REST API but **not the CLI** — `pull`, `link` and `deploy` all resolve the
+> authenticated user before doing anything, and a project token has no user to
+> resolve, so every command fails with `User not found (404)`. Least privilege
+> would be preferable here and the CLI does not currently permit it.
 
 The three **public** build values — `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 and `API_BASE_URL` — are set as repository *variables* rather than secrets,

@@ -59,10 +59,11 @@ jobs:
     # Two projects, one repository. Each deploy names its own config, which is
     # what keeps the web build and the API build independent.
     #
-    # Each leg also carries its OWN token. The tokens are project-scoped, so the
-    # web token cannot see the API project and vice versa — a leaked or misused
-    # credential can only reach the one project it was minted for. That is worth
-    # the extra secret over a single account-wide token that can deploy anything.
+    # `VERCEL_TOKEN` must be an ACCOUNT-scoped token, not a project-scoped one.
+    # Project tokens (`vcp_…`) authenticate against the REST API but not the CLI:
+    # `pull`, `link` and `deploy` all resolve the authenticated user first, and a
+    # project token has no user to resolve, so they fail with "User not found".
+    # Least privilege would be nicer here; the CLI does not currently allow it.
     strategy:
       fail-fast: false
       matrix:
@@ -70,11 +71,9 @@ jobs:
           - project: web
             config: vercel.web.json
             id_secret: VERCEL_PROJECT_ID_WEB
-            token_secret: VERCEL_TOKEN_WEB
           - project: api
             config: vercel.api.json
             id_secret: VERCEL_PROJECT_ID_API
-            token_secret: VERCEL_TOKEN_API
 
     steps:
       - uses: actions/checkout@v5
@@ -93,17 +92,17 @@ jobs:
       - name: Check credentials
         id: creds
         run: |
-          if [ -n "${{ secrets[matrix.token_secret] }}" ] && [ -n "${{ secrets[matrix.id_secret] }}" ]; then
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ] && [ -n "${{ secrets[matrix.id_secret] }}" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Skipping ${{ matrix.project }} deploy — set ${{ matrix.token_secret }}, VERCEL_ORG_ID and ${{ matrix.id_secret }} to enable it."
+            echo "::notice::Skipping ${{ matrix.project }} deploy — set an account-scoped VERCEL_TOKEN, VERCEL_ORG_ID and ${{ matrix.id_secret }} to enable it."
           fi
 
       - name: Deploy ${{ matrix.project }}
         if: steps.creds.outputs.ready == 'true'
         env:
-          VERCEL_TOKEN: ${{ secrets[matrix.token_secret] }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets[matrix.id_secret] }}
         run: |
