@@ -24,7 +24,12 @@ const SRC = 'apps/api/api';
 const OUT = '.vercel/output';
 const FUNCTIONS = join(OUT, 'functions');
 const STATIC = join(OUT, 'static');
-const RUNTIME = 'nodejs22.x';
+/**
+ * Must match a runtime the project actually offers. Derived from the running
+ * Node major rather than pinned, so this cannot drift away from `engines` and
+ * the project's configured version and fail only at invocation time.
+ */
+const RUNTIME = `nodejs${process.versions.node.split('.')[0]}.x`;
 
 function entries(dir) {
   return readdirSync(dir).flatMap((name) => {
