@@ -110,7 +110,7 @@ WEB_ORIGIN=…                  # api CORS allow-list
 apps/web            Angular 22, standalone, signals, zoneless.   Vercel project #1
 apps/api            Node serverless functions. Owns the machine. Vercel project #2
 packages/contracts  TRANSITIONS + GUARDS, the eligibility evaluator, wire schemas
-api/                Bundled function output (generated; see api/README.md)
+scripts/            build-api.mjs — bundles apps/api into .vercel/output
 ```
 
 `packages/contracts` is what makes this a monorepo rather than two folders. The
@@ -319,20 +319,24 @@ Accepted trade-offs:
 
 - **Two Vercel projects** cost CORS configuration and a second env set. Chosen
   deliberately for the deployment separation.
-- **The Vercel CLI cannot set a project's Root Directory non-interactively**, so
-  both projects deploy from the repository root. Vercel only compiles TypeScript
-  under the deployment root's `api/`, and tracing emitted imports to `apps/api`
-  sources it never compiled — every route returned `ERR_MODULE_NOT_FOUND`.
-  `scripts/build-api.mjs` therefore esbuild-bundles each handler into `api/` as a
-  self-contained function, so nothing is left to resolve at runtime. The source
-  of truth stays in `apps/api`; `api/*.js` is generated and gitignored.
-- **Deployment belongs to the Actions job, and only to it.** Vercel's Git
-  integration was connected early on, which meant every push rebuilt both
-  projects using each project's *default* settings — repository root,
-  auto-detect, no `--local-config`. For the API that produced a deployment where
-  `scripts/build-api.mjs` never ran, so it had no functions at all and served 404
-  on every route, and the production alias was reassigned to it on each push. Two
-  deploy paths existed and the wrong one silently won.
+- **The API is built through Vercel's Build Output API**, not by dropping files
+  into a root `api/` directory. Vercel discovers `api/**` functions from the
+  source tree it clones, so handlers *generated during the build* are never
+  registered and the deployment ships with no functions at all — every route
+  404s. That failure hid for a while behind the CLI, which uploads the working
+  directory: the built bundles were present locally, gitignored, and therefore
+  part of no commit. The deployment worked and could not be reproduced from a
+  clean clone. `scripts/build-api.mjs` now esbuild-bundles each handler into
+  `.vercel/output/functions/**.func` with an explicit route table, which is the
+  contract for "the build produces the functions" — the same commit deploys
+  identically from a laptop, from CI, or from Vercel's own builder.
+- **Exactly one system deploys.** An earlier revision had Vercel's Git
+  integration connected *and* CLI deploys running. Every push rebuilt both
+  projects with default settings, so the API deployed with no functions and the
+  production alias was reassigned to it, serving 404 on every route for about
+  forty minutes while the CLI deploys appeared to succeed. Two deploy paths
+  existed and the wrong one silently won. Deployment now belongs to Vercel's Git
+  integration alone; Actions gates and does not deploy.
 
   What made it dangerous was not the 404 but the schedule: the clobbering
   happened on push, minutes after a verified-good CLI deploy, so every manual
