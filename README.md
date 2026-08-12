@@ -47,27 +47,44 @@ pnpm run lint         # typecheck across the workspace
 
 ### Deployment
 
-`.github/workflows/ci.yml` runs install → lint → test → build on every push, then
-deploys **both** Vercel projects from `main`.
+Two stages, deliberately owned by different systems:
 
-| Secret | |
-|---|---|
-| `VERCEL_TOKEN` | **account-scoped** token |
-| `VERCEL_ORG_ID` | `team_ucus6vewEnZ67lEny9gWZJlA` |
-| `VERCEL_PROJECT_ID_WEB` | `prj_7OfRQJbUbNU5YaeLPj6ksfOc8UdZ` |
-| `VERCEL_PROJECT_ID_API` | `prj_bhsXhtATycMvdWXrbd47PetMgJkt` |
+| | Runs | Owns |
+|---|---|---|
+| **GitHub Actions** | every push and PR | install · lint · test · build — the gate |
+| **Vercel Git integration** | every push | deploying both projects |
 
-`VERCEL_ORG_ID` and both project ids are set. **`VERCEL_TOKEN` is not**, so the
-deploy job currently skips both legs with a notice rather than failing — a fork
-or a fresh clone gets a green pipeline instead of a red one it cannot fix.
+`.github/workflows/ci.yml` has no deploy job. Vercel is connected directly to
+this repository and deploys `main` to production and every other branch to a
+preview. **No Vercel credential exists in GitHub at all** — no token, no org id,
+no project ids — because nothing in Actions talks to Vercel.
 
-> The token must be **account-scoped**. Project-scoped tokens (`vcp_…`) were
-> tried first, since one token per project is the better security posture: each
-> can reach only the project it was minted for. They authenticate against the
-> REST API but **not the CLI** — `pull`, `link` and `deploy` all resolve the
-> authenticated user before doing anything, and a project token has no user to
-> resolve, so every command fails with `User not found (404)`. Least privilege
-> would be preferable here and the CLI does not currently permit it.
+That is the deliberate part. An Actions-driven deploy needs a long-lived
+`VERCEL_TOKEN`, and it has to be **account-scoped**: project-scoped tokens
+(`vcp_…`) authenticate against Vercel's REST API but not its CLI, which resolves
+the authenticated user before doing anything and fails with `User not found`.
+So the Actions route costs a credential that can deploy anything in the account,
+to do a job the platform already does natively for free. The token was removed
+rather than reduced, because the best-scoped secret is the one that does not
+exist.
+
+**Two deploy paths is the failure mode**, not one path or the other. An earlier
+revision had Vercel's Git integration connected *and* CLI deploys running: every
+push silently rebuilt both projects with default settings, so the API deployed
+with no functions at all and the alias was reassigned to it. Every route returned
+404 for about forty minutes while the CLI deploys appeared to succeed. Whichever
+system deploys, exactly one system deploys.
+
+Because both projects build from the repository root, each one's install, build
+and output commands live in its **Vercel project settings** rather than in a
+config file — one repository cannot hold two different root `vercel.json` files.
+The root `vercel.json` carries only what is genuinely shared: the SPA rewrite,
+scoped to exclude `/api` so it cannot shadow a function.
+
+| Project | Build | Output |
+|---|---|---|
+| `landjourney-web` | `pnpm --filter web run build` | `apps/web/dist/web/browser` |
+| `landjourney-api` | `node scripts/build-api.mjs` | `public` |
 
 The three **public** build values — `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
 and `API_BASE_URL` — are set as repository *variables* rather than secrets,
