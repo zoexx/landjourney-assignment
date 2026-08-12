@@ -44,10 +44,11 @@ If you only read six files, read these:
 | `packages/contracts/src/transitions.test.ts` | 26 invariant tests — illegal moves, wrong actors, the exact-limit boundary, the competing-credit race. |
 | `apps/web/src/app/core/guards.ts` | The client's route guards, whose own header states they are convenience and not authorization. |
 
-In the running app, the two things worth doing by hand: submit a release as the
-borrower and fund it as the lender (the balance moves atomically with the event
-history), then open the same request in two tabs and act in both — the second
-gets a 409 and a refetch, never a silent overwrite.
+In the running app: take the **$25,000 release already waiting in the lender
+queue** through review → approve → fund, and watch the balance move atomically
+with the event history. Then open one request in two tabs and act in both — the
+second gets a 409 and a refetch, never a silent overwrite. Submitting a fresh
+release as the borrower exercises the amount guard on the way in.
 
 ---
 
