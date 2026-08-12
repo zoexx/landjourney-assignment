@@ -75,6 +75,12 @@ async function emitFunction(route, entryPoint, contents) {
       2,
     ),
   );
+
+  // Each .func directory is its own deployment unit, so Node resolves the module
+  // type from the nearest package.json to the handler — not from the repository
+  // root. Without this the launcher parses an ESM bundle as CommonJS and every
+  // invocation fails before reaching a single line of application code.
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ type: 'module' }, null, 2));
   console.log(`[build-api] ${route}`);
 }
 
