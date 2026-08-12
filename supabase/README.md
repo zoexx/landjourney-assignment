@@ -1,6 +1,6 @@
 # Database
 
-The five migrations in `migrations/` are the exact statements applied to the
+The six migrations in `migrations/` are the exact statements applied to the
 hosted project, exported from `supabase_migrations.schema_migrations`. They are
 ordered and idempotent as a set — run them in filename order against a fresh
 Supabase project to recreate the schema, RLS policies, the guarded
@@ -19,6 +19,7 @@ for f in supabase/migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 | `transition_edges_and_commit_function` | `allowed_transitions` edge list, `commit_transition()`, the creation-event trigger |
 | `seed_form_schema` | the active application form and its eligibility rules, as data |
 | `seed_demo_accounts` | the two demo logins, the seeded facility and one funded release with history |
+| `seed_pending_release` | one `submitted` release, so the lender queue opens with work to act on |
 
 `seed_demo_accounts` writes directly to `auth.users`. That is a deliberate
 fixture: Supabase's signup endpoint rejects `example.com` addresses, and this
