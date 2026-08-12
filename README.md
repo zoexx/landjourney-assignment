@@ -21,7 +21,7 @@ authorization, concurrency, atomicity and failure handling — not feature count
 
 | Account | Password | Opens onto |
 |---|---|---|
-| `borrower@example.com` | `DemoBorrower2026` | A $100,000 facility, $40,000 drawn — **$60,000 available** — and one funded release |
+| `borrower@example.com` | `DemoBorrower2026` | A $100,000 facility, $40,000 drawn — **$60,000 available** — one funded release and one awaiting a decision |
 | `lender@example.com` | `DemoLender2026` | The cross-borrower review queue |
 
 Signup is live too, but a new account is always provisioned as a **borrower**
@@ -153,7 +153,7 @@ Actions holds no Vercel credential at all, because nothing in it talks to Vercel
 apps/web            Angular 22, standalone, signals, zoneless.   Vercel project #1
 apps/api            Node serverless functions. Owns the machine. Vercel project #2
 packages/contracts  TRANSITIONS + GUARDS, the eligibility evaluator, wire schemas
-supabase/           Five migrations that recreate the database exactly
+supabase/           Six migrations that recreate the database exactly
 scripts/            build-api.mjs — bundles apps/api into .vercel/output
 ```
 
