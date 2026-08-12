@@ -1,5 +1,7 @@
 # deps
-node_modules/
+# No trailing slash: a symlink named node_modules is not a directory, so
+# "node_modules/" would not match one and it lands in a commit.
+node_modules
 .pnpm-store/
 
 # build
