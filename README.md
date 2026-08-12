@@ -273,6 +273,24 @@ pnpm run test
 
 ---
 
+## On time spent
+
+The brief asks for two to three hours. This took substantially longer than that —
+on the order of a full day of wall-clock, including a schema-driven application
+form that Option 3 does not ask for.
+
+Stating it because a reviewer would otherwise reasonably assume the stated window,
+and because scoping judgment is a fair thing to assess. What the extra time went
+into, in rough order: the deployment topology (two Vercel projects from one repo,
+which cost more than the fifteen minutes budgeted), verifying claims against the
+live system rather than asserting them, and the bonus form.
+
+The core Option 3 workflow — the state machine, the transaction boundary,
+authorization, concurrency and the two servicing screens — was complete and
+tested well before the rest. If the right comparison is "what would three hours
+have produced", it is roughly everything above *except* the application form, the
+migration export and some of the failure-state polish.
+
 ## Trade-offs and what was deliberately cut
 
 Cut, and each would be a small, bounded addition:
