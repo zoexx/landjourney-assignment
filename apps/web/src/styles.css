@@ -74,7 +74,13 @@
 
   /* Type */
   --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /*
+   * Symbol fallbacks matter here: status glyphs are the non-colour signal, and
+   * IBM Plex Mono has no geometric shapes (◔ ◑ ◕) or ✕. Font fallback is
+   * per-character, so Plex still sets every digit and letter — these only fill
+   * the gaps that would otherwise render as tofu.
+   */
+  --font-mono: 'IBM Plex Mono', 'Apple Symbols', 'Segoe UI Symbol', 'Noto Sans Symbols 2', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --text-2xs: 0.625rem;   /* 10px — micro labels */
   --text-xs: 0.6875rem;   /* 11px — mono labels, timestamps */
@@ -111,15 +117,6 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: 1.5;
-  }
-
-  a {
-    color: var(--color-navy);
-    text-decoration: none;
-  }
-  a:hover {
-    color: var(--color-navy-hover);
-    text-decoration: underline;
   }
 
   :focus-visible {
@@ -189,4 +186,24 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/*
+ * Link decoration.
+ *
+ * Unlayered on purpose: Tailwind's preflight sets `text-decoration: inherit` on
+ * anchors inside the `base` layer, which left row links underlined at rest.
+ * Unlayered author styles outrank every layer, so this settles it.
+ *
+ * Underline belongs to inline prose links. A link that lays out a whole row
+ * (`block` / `flex`) signals hover with a background instead — underlining every
+ * text node inside a row is noise, not affordance.
+ */
+a {
+  color: var(--color-navy);
+  text-decoration: none;
+}
+a:not(.block):not(.flex):hover {
+  color: var(--color-navy-hover);
+  text-decoration: underline;
 }

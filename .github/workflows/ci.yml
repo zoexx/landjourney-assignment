@@ -47,3 +47,60 @@ jobs:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
           API_BASE_URL: ${{ vars.API_BASE_URL }}
+
+  deploy:
+    name: deploy both Vercel projects
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+
+    # Two projects, one repository. Each deploy names its own config, which is
+    # what keeps the web build and the API build independent.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: web
+            config: vercel.web.json
+            id_secret: VERCEL_PROJECT_ID_WEB
+          - project: api
+            config: vercel.api.json
+            id_secret: VERCEL_PROJECT_ID_API
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      # Deploy is skipped rather than failed when the credentials are absent, so
+      # a fork or a fresh clone still gets a green pipeline.
+      - name: Check credentials
+        id: creds
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ] && [ -n "${{ secrets[matrix.id_secret] }}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipping ${{ matrix.project }} deploy — set VERCEL_TOKEN, VERCEL_ORG_ID and ${{ matrix.id_secret }} to enable it."
+          fi
+
+      - name: Deploy ${{ matrix.project }}
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets[matrix.id_secret] }}
+        run: |
+          npx --yes vercel@54 pull --yes --environment=production --token "$VERCEL_TOKEN"
+          npx --yes vercel@54 deploy --prod --yes \
+            --local-config ${{ matrix.config }} \
+            --token "$VERCEL_TOKEN"

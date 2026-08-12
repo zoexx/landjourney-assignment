@@ -1,5 +1,11 @@
 # Ridgeline — agricultural lending servicing portal
 
+| | |
+|---|---|
+| **Live app** | https://landjourney-web.vercel.app |
+| **API** | https://landjourney-api.vercel.app |
+| **Repository** | https://github.com/zoexx/landjourney-assignment |
+
 **Option 3: the servicing portal.** An existing borrower draws against an
 established credit facility; a lender reviews, approves and releases the funds.
 
@@ -35,10 +41,29 @@ authorization, concurrency, atomicity and failure handling — not feature count
 
 ```bash
 pnpm install
+# recreate the database in a fresh Supabase project (see supabase/README.md)
+for f in supabase/migrations/*.sql; do psql "$DATABASE_URL" -f "$f"; done
 pnpm run dev          # web on :4200, api on :3001
 pnpm run test         # domain tests
 pnpm run lint         # typecheck across the workspace
 ```
+
+### Deployment
+
+`.github/workflows/ci.yml` runs install → lint → test → build on every push, then
+deploys **both** Vercel projects from `main`. The deploy job needs four repository
+secrets and **skips itself with a notice rather than failing** when they are
+absent, so a fork still gets a green pipeline:
+
+| Secret | |
+|---|---|
+| `VERCEL_TOKEN` | account token |
+| `VERCEL_ORG_ID` | team id |
+| `VERCEL_PROJECT_ID_WEB` | `landjourney-web` |
+| `VERCEL_PROJECT_ID_API` | `landjourney-api` |
+
+The deployments currently live were made with the same commands from the CLI, as
+the token is the owner's to mint.
 
 Environment (`.env`, and set on both Vercel projects):
 
@@ -57,7 +82,7 @@ WEB_ORIGIN=…                  # api CORS allow-list
 apps/web            Angular 22, standalone, signals, zoneless.   Vercel project #1
 apps/api            Node serverless functions. Owns the machine. Vercel project #2
 packages/contracts  TRANSITIONS + GUARDS, the eligibility evaluator, wire schemas
-api/                One-line re-export shims (see api/README.md)
+api/                Bundled function output (generated; see api/README.md)
 ```
 
 `packages/contracts` is what makes this a monorepo rather than two folders. The
@@ -136,8 +161,11 @@ by a trigger on `auth.users`); the lender was **provisioned** by a single
 
 ### There is no second way to move state
 
-RLS grants **no `UPDATE` on `requests` or `loans` to anyone**. The only path is
-`commit_transition()`. A `PATCH` straight to PostgREST with
+RLS grants **no `UPDATE` that can change a status**. Exactly one update policy
+exists — `requests_update_own_draft`, for form autosave — and its `WITH CHECK`
+pins the row to `status = 'draft'` and `version = 1`, so it cannot be used to
+move workflow state. `loans` has no update policy at all. The only path that
+moves a status or a balance is `commit_transition()`. A `PATCH` straight to PostgREST with
 `{"status":"approved"}` updates **zero rows** — verified, not assumed.
 
 ---
@@ -240,9 +268,12 @@ Accepted trade-offs:
 - **Two Vercel projects** cost CORS configuration and a second env set. Chosen
   deliberately for the deployment separation.
 - **The Vercel CLI cannot set a project's Root Directory non-interactively**, so
-  both projects deploy from the repository root and `api/` holds one-line
-  re-export shims. Setting Root Directory to `apps/api` in the dashboard makes
-  that directory deletable with no other change.
+  both projects deploy from the repository root. Vercel only compiles TypeScript
+  under the deployment root's `api/`, and tracing emitted imports to `apps/api`
+  sources it never compiled — every route returned `ERR_MODULE_NOT_FOUND`.
+  `scripts/build-api.mjs` therefore esbuild-bundles each handler into `api/` as a
+  self-contained function, so nothing is left to resolve at runtime. The source
+  of truth stays in `apps/api`; `api/*.js` is generated and gitignored.
 - **`@supabase/supabase-js` is pinned to 2.112.2**, not the latest. pnpm's
   `minimumReleaseAge` supply-chain policy rejects packages published within 24
   hours; rather than disable the policy I pinned to a version that has aged out.
@@ -323,6 +354,8 @@ In priority order:
 2. **Real idempotency keys** on the transition endpoint.
 3. **Integration tests** driving the HTTP surface, including the two-tab stale
    conflict and the competing-credit race, so those stop being manual checks.
+   Both are currently verified by hand against the live API — every claim in the
+   *Concurrency* section above was checked with real requests, not asserted.
 4. **Queue sorting and keyboard-first navigation** on the lender screen.
 5. **Observability** — structured logs around every transition, which is what
    makes "why is this request stuck in review" answerable in production.
