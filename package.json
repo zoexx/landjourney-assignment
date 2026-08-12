@@ -1,0 +1,19 @@
+{
+  "name": "landjourney-assignment",
+  "private": true,
+  "packageManager": "pnpm@11.16.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev --parallel"
+  },
+  "devDependencies": {
+    "turbo": "2.10.9",
+    "typescript": "~6.0.2"
+  }
+}

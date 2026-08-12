@@ -1,0 +1,192 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * Values are taken verbatim from the theme reference (see docs/design-tokens.md)
+ * and mapped onto the token names the ShadNG primitives expect, so the copied
+ * components inherit the institutional palette without being edited.
+ *
+ * The character being aimed at: quiet institutional finance. Tight 2px radii,
+ * small type, mono for anything that is data, one navy accent, no decoration.
+ */
+@theme {
+  /* Surfaces and text */
+  --color-background: #f2f4f7;
+  --color-foreground: #14181c;
+  --color-surface: #ffffff;
+  --color-raised: #fafbfc;
+  --color-row: #f7f8fa;
+  --color-subtle: #f0f2f5;
+  --color-sunken: #eceff3;
+
+  --color-ink: #14181c;
+  --color-ink-2: #333b43;
+  --color-ink-3: #3a424a;
+  --color-body: #4c555e;
+  --color-muted: #6b747e;
+  --color-faint: #9aa3ad;
+
+  --color-line: #e0e4e9;
+  --color-line-light: #e6e9ed;
+  --color-line-strong: #c3c9d1;
+
+  /* ShadNG / shadcn contract */
+  --color-card: #ffffff;
+  --color-card-foreground: #14181c;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #14181c;
+  --color-primary: #22496f;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #eceff3;
+  --color-secondary-foreground: #333b43;
+  --color-muted-foreground: #6b747e;
+  --color-accent: #edf2f7;
+  --color-accent-foreground: #1a3a5a;
+  --color-destructive: #9c2a2a;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #e0e4e9;
+  --color-input: #c3c9d1;
+  --color-ring: #22496f;
+
+  /* Accent */
+  --color-navy: #22496f;
+  --color-navy-hover: #16324f;
+  --color-navy-deep: #1a3a5a;
+  --color-navy-border: #c8d6e3;
+  --color-navy-bg: #edf2f7;
+
+  /* Status — always paired with a glyph, never colour alone */
+  --color-ok: #1a6b4c;
+  --color-ok-deep: #12523a;
+  --color-ok-bg: #ecf4f0;
+  --color-ok-border: #c0dbcd;
+
+  --color-warn: #8a5a12;
+  --color-warn-deep: #6d4709;
+  --color-warn-bg: #fbf3e6;
+  --color-warn-border: #e8d5b0;
+
+  --color-bad: #9c2a2a;
+  --color-bad-deep: #7d2020;
+  --color-bad-bg: #fbeeee;
+  --color-bad-border: #eccaca;
+
+  /* Type */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --text-2xs: 0.625rem;   /* 10px — micro labels */
+  --text-xs: 0.6875rem;   /* 11px — mono labels, timestamps */
+  --text-sm: 0.75rem;     /* 12px — dense table text */
+  --text-base: 0.8125rem; /* 13px — body */
+  --text-md: 0.875rem;    /* 14px */
+  --text-lg: 1rem;        /* 16px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.375rem;   /* 22px */
+  --text-3xl: 1.75rem;    /* 28px */
+
+  /* Institutional geometry: almost square. */
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    background: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+  }
+
+  a {
+    color: var(--color-navy);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-navy-hover);
+    text-decoration: underline;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-navy);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* Corners are square by default; rounding is opted into, not out of. */
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    border-radius: 2px;
+  }
+
+  h1, h2, h3, h4 {
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+  }
+}
+
+@layer components {
+  /*
+   * The uppercase mono micro-label that carries most of the structure in this
+   * design — column headers, field labels, section eyebrows.
+   */
+  .label-micro {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  /* Tabular numerals so money and dates line up down a column. */
+  .numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 2px;
+  }
+
+  .panel-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-line-light);
+    background: var(--color-raised);
+  }
+}
+
+/* Respect a reduced-motion preference for the few transitions in play. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
