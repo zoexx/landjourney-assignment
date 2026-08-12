@@ -1,0 +1,24 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    # One PR per ecosystem rather than a swarm of single-package bumps.
+    groups:
+      angular:
+        patterns: ['@angular/*']
+      dev-tooling:
+        dependency-type: development
+    ignore:
+      # Transitive, via @angular/cli -> @modelcontextprotocol/sdk. It cannot be
+      # bumped independently of the Angular CLI, so Dependabot can only open a
+      # PR that fails to install. The advisory is a path traversal in
+      # `serve-static` on Windows; nothing here serves static files through
+      # Hono, and it never reaches a deployed bundle.
+      - dependency-name: '@hono/node-server'
+      # pnpm enforces a 24h minimumReleaseAge, so same-day releases cannot be
+      # installed. Patch bumps land on the next weekly run instead.
+      - dependency-name: '*'
+        update-types: ['version-update:semver-patch']
