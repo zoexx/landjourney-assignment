@@ -62,8 +62,23 @@ absent, so a fork still gets a green pipeline:
 | `VERCEL_PROJECT_ID_WEB` | `landjourney-web` |
 | `VERCEL_PROJECT_ID_API` | `landjourney-api` |
 
-The deployments currently live were made with the same commands from the CLI, as
-the token is the owner's to mint.
+> **Status, stated plainly:** those four secrets are **not set on this repository
+> yet**, so the deploy job currently skips both legs with a notice instead of
+> deploying. `VERCEL_TOKEN` has to be minted by the account owner, which is not
+> something the build can do for itself. The live deployments above were made
+> with exactly the commands in that job, run from the CLI. Adding the secrets
+> turns push-to-deploy on with no change to the workflow file.
+>
+> The two project ids are `prj_7OfRQJbUbNU5YaeLPj6ksfOc8UdZ` (web) and
+> `prj_bhsXhtATycMvdWXrbd47PetMgJkt` (api); the org is
+> `team_ucus6vewEnZ67lEny9gWZJlA`.
+
+The three **public** build values — `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`
+and `API_BASE_URL` — are set as repository *variables* rather than secrets,
+because none of them is secret: the publishable key is protected by RLS, not by
+being hidden. `scripts/gen-env.mjs` now **fails the build** when `CI=true` or
+`VERCEL=1` and `API_BASE_URL` is missing, so a pipeline can no longer go green
+having produced a bundle that points at `localhost`.
 
 Environment (`.env`, and set on both Vercel projects):
 

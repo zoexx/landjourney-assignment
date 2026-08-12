@@ -7,11 +7,33 @@
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 
-const env = {
-  supabaseUrl: process.env.SUPABASE_URL ?? 'https://hvymtfuojhzagfnszoey.supabase.co',
-  supabaseKey: process.env.SUPABASE_PUBLISHABLE_KEY ?? 'sb_publishable_c8zezP75jyeZtVlYs_wwxw_o1-SBCsE',
-  apiBase: process.env.API_BASE_URL ?? 'http://localhost:3001',
+const DEFAULTS = {
+  supabaseUrl: 'https://hvymtfuojhzagfnszoey.supabase.co',
+  supabaseKey: 'sb_publishable_c8zezP75jyeZtVlYs_wwxw_o1-SBCsE',
+  apiBase: 'http://localhost:3001',
 };
+
+const env = {
+  supabaseUrl: process.env.SUPABASE_URL ?? DEFAULTS.supabaseUrl,
+  supabaseKey: process.env.SUPABASE_PUBLISHABLE_KEY ?? DEFAULTS.supabaseKey,
+  apiBase: process.env.API_BASE_URL ?? DEFAULTS.apiBase,
+};
+
+/*
+ * Fail rather than fall back when building in CI or for a deployment.
+ *
+ * The localhost default is right for `pnpm dev` and wrong everywhere else. Left
+ * silent, a pipeline goes green having built a bundle that points at a machine
+ * that is not there — the build proves less than it appears to.
+ */
+const isRelease = process.env.CI === 'true' || process.env.VERCEL === '1';
+if (isRelease && env.apiBase === DEFAULTS.apiBase) {
+  console.error(
+    '[gen-env] API_BASE_URL is not set. A release build must not point at localhost.\n' +
+      '          Set it as a repository variable (CI) or a project env var (Vercel).',
+  );
+  process.exit(1);
+}
 
 mkdirSync('src/environments', { recursive: true });
 writeFileSync(
