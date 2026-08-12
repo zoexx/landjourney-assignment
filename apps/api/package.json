@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@lj/contracts": "workspace:*",
-    "@supabase/supabase-js": "^2.112.3",
+    "@supabase/supabase-js": "2.112.2",
     "zod": "^4.1.13"
   },
   "devDependencies": {

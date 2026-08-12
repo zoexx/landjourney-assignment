@@ -21,7 +21,7 @@
     "@angular/platform-browser": "^22.1.0",
     "@angular/router": "^22.1.0",
     "@lj/contracts": "workspace:*",
-    "@supabase/supabase-js": "^2.112.3",
+    "@supabase/supabase-js": "2.112.2",
     "clsx": "^2.1.1",
     "rxjs": "~7.8.0",
     "tailwind-merge": "^3.6.0",

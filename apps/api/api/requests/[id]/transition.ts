@@ -22,9 +22,9 @@
 import {
   evaluateTransition,
   requiredFieldKeys,
-  transitionRequestSchema,
   type GuardContext,
 } from '@lj/contracts';
+import { transitionRequestSchema } from '@lj/contracts/schemas';
 import { authenticate } from '../../../lib/auth.js';
 import {
   applyCors,

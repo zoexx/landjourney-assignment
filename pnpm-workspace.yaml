@@ -3,6 +3,12 @@ packages:
   - "packages/*"
 
 # Angular's toolchain needs these to run their install scripts.
+allowBuilds:
+  esbuild: true
+  '@parcel/watcher': true
+  lmdb: true
+  msgpackr-extract: true
+
 onlyBuiltDependencies:
   - esbuild
   - "@parcel/watcher"
