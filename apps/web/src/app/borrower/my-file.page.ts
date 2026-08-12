@@ -205,6 +205,43 @@ type Purpose = (typeof PURPOSES)[number];
             }
           </section>
 
+          <section class="panel mt-4" aria-labelledby="applications-heading">
+            <div class="panel-header flex items-baseline justify-between gap-4">
+              <h2 id="applications-heading" class="label-micro">Applications</h2>
+              <a
+                routerLink="/apply/new"
+                class="border border-line-strong bg-surface px-2.5 py-1 text-sm font-medium text-body transition-colors hover:border-navy-border hover:bg-navy-bg hover:text-navy hover:no-underline"
+              >Start an application</a>
+            </div>
+
+            @if (applications().length === 0) {
+              <div class="px-6 py-8 text-center">
+                <p class="text-base text-body">
+                  No applications on file. An application opens a new facility; it saves as you go, so
+                  you can leave it and come back.
+                </p>
+              </div>
+            } @else {
+              <ul class="divide-y divide-line-light">
+                @for (row of applications(); track row.id) {
+                  <li>
+                    <a
+                      [routerLink]="row.link"
+                      class="block px-4 py-3 transition-colors hover:bg-row hover:no-underline focus-visible:bg-row"
+                    >
+                      <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                        <span class="numeric text-md font-medium text-ink">{{ row.amount ?? 'Not yet costed' }}</span>
+                        <app-status-badge [status]="row.status" />
+                        <span class="numeric ml-auto text-xs text-faint">{{ row.when }}</span>
+                      </div>
+                      <p class="mt-1 max-w-[74ch] text-sm text-muted">{{ row.explanation }}</p>
+                    </a>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
+
           <section class="panel mt-4" aria-labelledby="requests-heading">
             <div class="panel-header flex items-baseline justify-between gap-4">
               <h2 id="requests-heading" class="label-micro">Credit release requests</h2>
@@ -245,6 +282,11 @@ type Purpose = (typeof PURPOSES)[number];
               There is no credit facility against your name yet. Once one is opened, your limit, balance
               and available credit appear here and you can request releases against it.
             </p>
+          
+            <a
+              routerLink="/apply/new"
+              class="mt-5 inline-block bg-navy px-3 py-2 text-base font-medium text-white transition-colors hover:bg-navy-hover hover:no-underline"
+            >Apply for a facility</a>
           </section>
         }
       </div>
@@ -355,6 +397,25 @@ export class MyFilePage {
    * Credit releases only. Applications ride the same workflow but belong to the
    * application flow, and mixing them here would make the list mean two things.
    */
+  /**
+   * Applications, kept as their own list for the reason above: a borrower asking
+   * "where is my application" and "what have I drawn" are two different
+   * questions, and one list answering both answers neither well.
+   */
+  protected readonly applications = computed(() =>
+    this.requests()
+      .filter((request) => request.type === 'application')
+      .map((request) => ({
+        id: request.id,
+        amount: request.amount > 0 ? formatMoney(request.amount) : null,
+        status: request.status,
+        when: formatDate(request.createdAt),
+        explanation: STATUS_COPY[request.status].borrower,
+        // A draft resumes into the form; anything submitted is read-only.
+        link: request.status === 'draft' ? ['/apply', request.id] : ['/requests', request.id],
+      })),
+  );
+
   protected readonly rows = computed(() =>
     this.requests()
       .filter((request) => request.type === 'credit_release')

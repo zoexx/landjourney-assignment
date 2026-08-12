@@ -77,6 +77,9 @@ const INPUT_BASE =
 /**
  * One field, rendered from its schema entry.
  *
+ * Exported only because Angular's template type-checker cannot import a symbol
+ * that is not; it belongs to this file and nothing else references it.
+ *
  * It switches on `type` and on nothing else — no branch in this file knows that
  * a field is called `acreage`. Money is the single modifier: it is typed in
  * dollars and stored as integer cents, so the parse happens here and everything
@@ -115,8 +118,7 @@ const INPUT_BASE =
             (blur)="touched.emit()"
             [ngModelOptions]="{ standalone: true }"
             [disabled]="disabled()"
-            class="{{ INPUT_BASE }}"
-            [class]="borderClass()"
+            [class]="inputClass()"
           />
         }
 
@@ -138,8 +140,7 @@ const INPUT_BASE =
                 (blur)="touched.emit()"
                 [ngModelOptions]="{ standalone: true }"
                 [disabled]="disabled()"
-                class="{{ INPUT_BASE }} numeric pl-6"
-                [class]="borderClass()"
+                [class]="moneyClass()"
               />
             </div>
           } @else {
@@ -156,8 +157,7 @@ const INPUT_BASE =
               (blur)="touched.emit()"
               [ngModelOptions]="{ standalone: true }"
               [disabled]="disabled()"
-              class="{{ INPUT_BASE }} numeric"
-              [class]="borderClass()"
+              [class]="numericClass()"
             />
           }
         }
@@ -172,8 +172,7 @@ const INPUT_BASE =
             (blur)="touched.emit()"
             [ngModelOptions]="{ standalone: true }"
             [disabled]="disabled()"
-            class="{{ INPUT_BASE }}"
-            [class]="borderClass()"
+            [class]="inputClass()"
           >
             <!-- An unanswered question is blank, not the first option by accident. -->
             <option value="">Select…</option>
@@ -196,8 +195,7 @@ const INPUT_BASE =
             (blur)="touched.emit()"
             [ngModelOptions]="{ standalone: true }"
             [disabled]="disabled()"
-            class="{{ INPUT_BASE }} resize-y"
-            [class]="borderClass()"
+            [class]="areaClass()"
           ></textarea>
         }
       }
@@ -214,7 +212,7 @@ const INPUT_BASE =
     </div>
   `,
 })
-class DynamicField {
+export class DynamicField {
   readonly field = input.required<FormField>();
   /** Whatever the payload holds for this key — cents for money, absent when unanswered. */
   readonly value = input<unknown>();
@@ -224,8 +222,6 @@ class DynamicField {
 
   readonly valueChange = output<unknown>();
   readonly touched = output<void>();
-
-  protected readonly INPUT_BASE = INPUT_BASE;
 
   /** Field keys are unique across the schema, so they make stable, readable ids. */
   protected readonly controlId = computed(() => `field-${this.field().key}`);
@@ -262,9 +258,16 @@ class DynamicField {
 
   protected readonly problem = computed(() => this.error() ?? this.moneyProblem());
 
-  protected readonly borderClass = computed(() =>
-    this.problem() !== null ? 'border-bad-border' : 'border-line-strong',
+  /**
+   * One class binding per control, never a static class alongside a bound one:
+   * two class bindings on an element fight over the same slot.
+   */
+  protected readonly inputClass = computed(
+    () => `${INPUT_BASE} ${this.problem() !== null ? 'border-bad-border' : 'border-line-strong'}`,
   );
+  protected readonly numericClass = computed(() => `${this.inputClass()} numeric`);
+  protected readonly moneyClass = computed(() => `${this.inputClass()} numeric pl-6`);
+  protected readonly areaClass = computed(() => `${this.inputClass()} resize-y`);
 
   /** The lender's help text, and for money an echo of what we actually stored. */
   protected readonly hint = computed<string | null>(() => {
@@ -330,7 +333,6 @@ class DynamicField {
             </div>
           </div>
         </div>
-        <p class="sr-only">Loading your application…</p>
       } @else if (notFound()) {
         <!-- Distinct from a failure: we reached the server and it has no such draft. -->
         <section class="panel mt-3 px-6 py-12 text-center">
@@ -597,6 +599,7 @@ export class ApplicationPage {
   protected readonly submitError = signal<string | null>(null);
 
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private saveInFlight: Promise<void> | null = null;
 
   constructor() {
     // Route → data. The id is the whole input, so a change of it is a different
@@ -931,26 +934,37 @@ export class ApplicationPage {
     this.cancelPendingSave();
     this.saveTimer = setTimeout(() => {
       this.saveTimer = null;
-      void this.save();
+      if (this.dirty()) void this.save();
     }, AUTOSAVE_MS);
   }
 
   /** Write now rather than in 800ms — before a step change, and before submit. */
   private async flush(): Promise<void> {
     this.cancelPendingSave();
+    // A request already in flight left with an older payload, so wait it out and
+    // then write whatever has been typed since. Submitting must not race it.
+    if (this.saveInFlight !== null) await this.saveInFlight;
+    this.cancelPendingSave();
     if (this.dirty()) await this.save();
   }
 
-  private async save(): Promise<void> {
-    const request = this.request();
-    if (!request) return;
-
-    if (this.saving()) {
+  private save(): Promise<void> {
+    if (this.saveInFlight !== null) {
       // Two PATCHes racing on one row would let the older payload land last.
       // Re-queue instead, so the newest answers are the ones that win.
       this.queueSave();
-      return;
+      return this.saveInFlight;
     }
+    const flight = this.write().finally(() => {
+      this.saveInFlight = null;
+    });
+    this.saveInFlight = flight;
+    return flight;
+  }
+
+  private async write(): Promise<void> {
+    const request = this.request();
+    if (!request) return;
 
     this.saving.set(true);
     this.saveError.set(null);

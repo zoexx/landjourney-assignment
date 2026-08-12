@@ -324,27 +324,44 @@ Stated as decisions, not omissions:
    The screen is built and correct. I deliberately did **not** add a trigger to
    auto-confirm addresses — that weakens an authentication control, and it is the
    owner's call, not mine. One toggle in Auth → Providers → Email fixes it.
-2. **The schema-driven application form is scaffolded but not finished** — see
-   below.
+2. The autosave debounce window described under *The bonus* below.
 
 ---
 
 ## The bonus: a schema-driven application form
 
-`form_schemas` holds `steps` and `rules` as JSONB, seeded and live. The
-contracts package already ships the renderer's type model
-(`FormField`/`FormStep`/`FormSchema`), `validatePayload()` shared by both
-runtimes, and a pure `evaluateEligibility()` that runs client-side for live
-feedback and server-side at transition time. The database columns
-(`payload`, `draft_step`, `eligibility`, `schema_id`), the RLS policy for draft
-autosave, and the `PATCH /api/requests/:id/draft` endpoint that recomputes
-eligibility server-side are all built and working.
+Built and live. The form is **lender-defined data, not markup**: a `form_schemas`
+row holds `steps` and `rules` as JSONB, and Angular renders it at runtime.
 
-**What is not built is the Angular renderer** (`borrower/application.page.ts` is
-still a placeholder). The core workflow was the committed scope and it came
-first; this is the honest status rather than a claim.
+- **Four field types** — `text`, `number`, `select`, `textarea` — and the
+  renderer switches on `field.type` and nothing else. No code anywhere branches
+  on a field *key*. Adding a field is a data change.
+- **Validators are derived from the schema**, never written per field.
+  `validatePayload()` runs client-side for live messages and server-side at the
+  `draft → submitted` boundary — one definition, two consumers, so they cannot
+  drift. Untouched fields are not shouted at until a submit is attempted.
+- **Autosave to Postgres.** Edits debounce 800ms then `PATCH /api/requests/:id/draft`
+  with `{ payload, step }`. Not localStorage, not component state. The step is
+  saved alongside the values and flushed immediately on step change.
+- **Resume.** A hard refresh mid-form returns to the same step with values
+  intact — verified live: refreshed on step 2, came back on step 2 with the
+  entered values restored and eligibility recomputed from the persisted payload.
+- **Eligibility is evaluated in both runtimes.** The same pure evaluator runs
+  client-side on every keystroke for the live panel (no network call per
+  keystroke) and again **server-side** in the draft endpoint, which persists the
+  verdict. Confirmed in the database: the row carried `eligibility.level` written
+  by the server, not by the browser. A rule only appears once the questions it
+  reads are answered, so a half-filled form does not read as a rejection.
+- **Eligibility gates legality.** A green application may be approved straight
+  from `submitted`; anything amber or red must route through `under_review`. That
+  is the `eligibility_green` guard in the transition map, not a UI rule.
 
----
+**One honest limitation:** the autosave debounce means a keystroke made in the
+last 800ms before a hard refresh can be lost. Everything older is durable. A
+`beforeunload` flush would narrow the window but not close it; the real fix is
+optimistic local buffering reconciled on load, which was out of scope here. The
+step marker and all settled values survive, which is what the durability claim
+rests on.
 
 ## How AI was used
 
@@ -383,16 +400,13 @@ Things that looked plausible and were wrong, caught by checking:
 
 In priority order:
 
-1. **Finish the dynamic form renderer** — the data model, validator, evaluator
-   and autosave endpoint are already there; it is the Angular component that is
-   missing.
-2. **Real idempotency keys** on the transition endpoint.
-3. **Integration tests** driving the HTTP surface, including the two-tab stale
+1. **Real idempotency keys** on the transition endpoint.
+2. **Integration tests** driving the HTTP surface, including the two-tab stale
    conflict and the competing-credit race, so those stop being manual checks.
    Both are currently verified by hand against the live API — every claim in the
    *Concurrency* section above was checked with real requests, not asserted.
-4. **Queue sorting and keyboard-first navigation** on the lender screen.
-5. **Observability** — structured logs around every transition, which is what
+3. **Queue sorting and keyboard-first navigation** on the lender screen.
+4. **Observability** — structured logs around every transition, which is what
    makes "why is this request stuck in review" answerable in production.
 
 A production system would additionally need administrative provisioning, richer
