@@ -17,6 +17,6 @@
     "esbuild": "^0.28.1",
     "pg": "^8.23.0",
     "turbo": "2.10.9",
-    "typescript": "~6.0.2"
+    "typescript": "~7.0.2"
   }
 }
